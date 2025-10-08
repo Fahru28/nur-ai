@@ -1,14 +1,15 @@
 from flask import Flask, request, jsonify, render_template
-from response_engine import ResponseEngine
+from ai_engine_advanced import AdvancedNurAI
 import os
 from datetime import datetime
 
 app = Flask(__name__)
 
-# Initialize the SMART engine
-print("🌙 Loading Nur AI Smart Engine...")
-ai_engine = ResponseEngine()
-print("✅ Nur AI Smart Engine Ready!")
+# Initialize the ADVANCED engine
+print("🌙 Loading Nur AI Advanced Engine...")
+ai_engine = AdvancedNurAI()
+print("✅ Nur AI Advanced Engine Ready!")
+print("🧠 Features: Conversation Memory, Context Awareness, Personalization")
 
 @app.route('/')
 def home():
@@ -22,11 +23,11 @@ def chat():
         if not user_message:
             return jsonify({
                 "response": "Maaf, pesan tidak boleh kosong...",
-                "emotion": "netral",
+                "emotion": "neutral",
                 "timestamp": datetime.now().strftime("%H:%M")
             })
         
-        # Use the SMART engine dengan error handling
+        # Use the ADVANCED engine
         ai_response = ai_engine.generate_response(user_message)
         
         return jsonify(ai_response)
@@ -35,23 +36,38 @@ def chat():
         print(f"Error: {e}")
         return jsonify({
             "response": "Maaf, ada gangguan sebentar. Mari kita coba lagi...",
-            "emotion": "netral", 
+            "emotion": "neutral", 
             "timestamp": datetime.now().strftime("%H:%M")
         })
+
+@app.route('/api/conversation/summary')
+def conversation_summary():
+    """Endpoint to get conversation summary"""
+    try:
+        summary = ai_engine.get_conversation_summary()
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 @app.route('/health')
 def health():
     return jsonify({
         "status": "healthy", 
-        "service": "Nur AI Smart Version",
-        "features": ["emotion_detection", "islamic_knowledge", "personalized_responses"]
+        "service": "Nur AI Advanced Version",
+        "features": [
+            "conversation_memory", 
+            "context_awareness", 
+            "personalized_responses",
+            "advanced_emotion_detection"
+        ],
+        "conversation_count": ai_engine.user_profile["conversation_count"]
     })
 
 # Vercel compatible
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("🌙 Nur AI Smart Version Starting...")
+    print("🌙 Nur AI Advanced Version Starting...")
     print("📱 Access at: http://localhost:5000")
-    print("🧠 Features: Emotion Detection, Islamic Wisdom, Personalized Responses")
+    print("🧠 Smart Features: Memory, Context, Personalization")
     print("⚡ Optimized for Vercel")
     app.run(host='0.0.0.0', port=port, debug=False)
