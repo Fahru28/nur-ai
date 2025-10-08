@@ -1,85 +1,87 @@
 from flask import Flask, request, jsonify, render_template
-import requests
-import os
 import random
 from datetime import datetime
 
 app = Flask(__name__)
 
-# Ambil API Key dari environment variable Vercel
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyBSPTuqaE2x1TP15lznwhCtSuZ4DfrFEWM')
-
-def gemini_http_request(prompt):
-    """Pakai Gemini via HTTP API"""
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-    
-    headers = {'Content-Type': 'application/json'}
-    
-    data = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=data, timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            return result['candidates'][0]['content']['parts'][0]['text']
-        else:
-            return None
-    except:
-        return None
-
-# Enhanced fallback responses
-RESPONSES = {
+# PURE RULE-BASED ISLAMIC RESPONSES
+ISLAMIC_RESPONSES = {
     "greeting": [
-        "Assalamu'alaikum warahmatullahi wabarakatuh! 🌙 Senang sekali berbicara denganmu! Semoga Allah memberkahi percakapan kita dengan ketenangan dan hikmah...",
+        "Assalamu'alaikum warahmatullahi wabarakatuh! 🌙 Alhamdulillah, senang sekali bisa berbicara denganmu! Semoga Allah memberkahi percakapan kita dengan ketenangan dan hikmah...",
         "Wa'alaikumussalam! Cahaya pagi/sore/malam ini terasa lebih indah dengan kehadiranmu. Mari kita isi percakapan ini dengan dzikir dan kebaikan...",
+        "Alhamdulillah, senang mendengar sapaan hangat darimu! Ada cerita, perasaan, atau pertanyaan apa yang ingin kita bahas bersama hari ini?",
     ],
     "sad": [
-        "Wahai saudaraku, aku turut merasakan kesedihanmu... 💔 Tapi ingatlah firman Allah: 'Janganlah kamu berputus asa dari rahmat Allah. Sesungguhnya Allah mengampuni dosa-dosa semuanya.' (QS Az-Zumar: 53)...",
-        "Dengan penuh kasih sayang, aku mendengarmu... Kesedihanmu adalah ujian untuk menguatkan iman. Mari kita hadapi ini dengan sabar dan shalat...",
+        "Wahai saudaraku, aku turut merasakan kesedihanmu... 💔 Tapi ingatlah firman Allah: 'Janganlah kamu berputus asa dari rahmat Allah. Sesungguhnya Allah mengampuni dosa-dosa semuanya.' (QS Az-Zumar: 53). Mari kita hadapi ini dengan sabar dan shalat...",
+        "Dengan penuh kasih sayang, aku mendengarmu... Kesedihanmu adalah ujian untuk menguatkan iman. Rasulullah bersabda: 'Sungguh menakjubkan urusan orang beriman, semua urusannya adalah baik baginya...' (HR Muslim). Mari kita bersabar bersama...",
+        "Mari kita hadapi kesedian ini dengan tawakal... Allah berfirman: 'Dan bersabarlah kamu, sesungguhnya Allah beserta orang-orang yang sabar.' (QS Al-Anfal: 46). Setiap air mata kesedihan akan menjadi pembersih hati...",
     ],
     "happy": [
-        "Alhamdulillah! Senang sekali hatiku mendengar kabar baikmu! 🎉 Ingatlah untuk bersyukur, karena Allah berfirman: 'Jika kamu bersyukur, niscaya Aku akan tambahkan nikmat-Ku kepadamu.' (QS Ibrahim: 7)...",
-        "Subhanallah! Kebahagiaanmu adalah bukti kasih sayang-Nya. 💫 Teruslah berbagi kebahagiaan dengan sesama...",
+        "Alhamdulillah! Senang sekali hatiku mendengar kabar baikmu! 🎉 Ingatlah untuk bersyukur, karena Allah berfirman: 'Jika kamu bersyukur, niscaya Aku akan tambahkan nikmat-Ku kepadamu.' (QS Ibrahim: 7). Teruslah berbagi kebahagiaan dengan sesama...",
+        "Subhanallah! Kebahagiaanmu adalah bukti kasih sayang-Nya yang tak terhingga. 💫 Rasulullah bersabda: 'Sebaik-baik manusia adalah yang paling bermanfaat bagi manusia.' Mari manfaatkan kebahagiaanmu untuk berbuat kebaikan pada sesama...",
+        "Maha Suci Allah yang telah memberimu kebahagiaan! Syukuri nikmat ini dengan meningkatkan ibadah dan membantu mereka yang membutuhkan. Bahagiamu akan lebih berarti ketika bisa menjadi cahaya bagi orang lain...",
+    ],
+    "thanks": [
+        "Wa'alaikumussalam warahmatullahi wabarakatuh! Jazakallahu khairan! 🌟 Semoga Allah membalas semua kebaikanmu dengan yang lebih baik dan melimpahkan rahmat-Nya...",
+        "Alhamdulillah! Senang bisa membantu dan mendengarkan. Mari kita lanjutkan perjalanan spiritual ini bersama dalam kebaikan dan ketakwaan... 💫",
+        "Terima kasih kembali! Semoga percakapan kita membawa berkah dan mendekatkan kita pada ridha Allah... 🌙",
+    ],
+    "confused": [
+        "Wah, sepertinya ada yang membuatmu bingung... 🤔 Mari kita mohon petunjuk Allah dengan shalat istikharah. Rasulullah bersabda: 'Jika salah seorang di antara kalian berkeinginan melakukan sesuatu, hendaklah ia shalat sunnah dua rakaat...' (HR Bukhari)...",
+        "Kebingungan adalah bagian dari proses mencari makna... Allah berfirman: 'Dan barang siapa yang bertawakal kepada Allah, niscaya Allah akan mencukupkan keperluannya.' (QS At-Talaq: 3). Mari kita serahkan semua kebingungan pada Yang Maha Mengetahui...",
+        "Setiap kebingungan membawa kita lebih dekat pada pencerahan... Nabi Muhammad mengajarkan: 'Mintalah fatwa kepada hatimu, kebaikan adalah apa yang menenangkan jiwa dan hati.' Mari kita dengarkan suara hati dengan tenang...",
+    ],
+    "question": [
+        "Pertanyaan yang bagus! 🤔 Mari kita renungkan bersama... Dalam mencari jawaban, kita diajarkan untuk berdoa: 'Ya Allah, tunjukkanlah yang benar itu benar dan berilah kekuatan untuk mengikutinya...'",
+        "Aku memahami keingintahuanmu... 🌟 Mari kita cari jawaban dengan sabar. Allah berfirman: 'Dan bertanyalah kepada orang yang mempunyai pengetahuan jika kamu tidak mengetahui.' (QS An-Nahl: 43)...",
+        "Mari kita eksplorasi pertanyaanmu bersama... 💭 Dalam Islam, menuntut ilmu adalah ibadah. Rasulullah bersabda: 'Menuntut ilmu wajib bagi setiap muslim.' (HR Ibnu Majah)...",
+    ],
+    "general": [
+        "Ceritakan lebih banyak, aku sungguh-sungguh mendengarkan dengan sepenuh hati... 👂 Setiap cerita punya hikmah dan pelajaran berharga untuk kita ambil...",
+        "Apa yang ingin kamu bicarakan hari ini? 🌟 Kadang dengan berbagi cerita, beban hati menjadi lebih ringan dan kita bisa saling menguatkan dalam kebaikan...",
+        "Aku di sini untukmu, ceritakan apa yang ada di hati... 💖 Dalam Islam, saling berbagi dan mendengarkan adalah bentuk sedekah yang mulia dan mendatangkan pahala...",
     ]
 }
 
-def detect_emotion(text):
-    text = text.lower()
-    if any(w in text for w in ['sedih', 'kecewa']): return "sad"
-    elif any(w in text for w in ['senang', 'bahagia', 'alhamdulillah']): return "happy" 
-    elif any(w in text for w in ['bingung', 'ragu']): return "confused"
-    elif any(w in text for w in ['hai', 'halo', 'assalamu']): return "greeting"
-    else: return "general"
+def detect_intent(text):
+    """Smart intent detection dengan priority"""
+    text = text.lower().strip()
+    
+    # Exact matches first
+    exact_matches = {
+        'hai': 'greeting', 'halo': 'greeting', 'hi': 'greeting', 'hello': 'greeting',
+        'assalamu\'alaikum': 'greeting', 'assalamualaikum': 'greeting',
+        'terima kasih': 'thanks', 'makasih': 'thanks', 'thanks': 'thanks', 
+        'thank you': 'thanks',
+        'ya': 'general', 'ok': 'general', 'oke': 'general', 'okey': 'general',
+        'iya': 'general', 'y': 'general',
+        'tau gak': 'question', 'tahu gak': 'question',
+    }
+    
+    if text in exact_matches:
+        return exact_matches[text]
+    
+    # Pattern matching
+    if any(w in text for w in ['sedih', 'kecewa', 'menangis', 'putus asa', 'patah hati']):
+        return "sad"
+    elif any(w in text for w in ['senang', 'bahagia', 'alhamdulillah', 'syukur', 'gembira']):
+        return "happy"
+    elif any(w in text for w in ['bingung', 'ragu', 'gimana', 'bagaimana', 'pusing']):
+        return "confused"
+    elif any(w in text for w in ['?', 'apa', 'kenapa', 'mengapa', 'kapan', 'siapa']):
+        return "question"
+    
+    return "general"
 
 def generate_response(user_input):
-    # Coba pakai Gemini dulu
-    prompt = f"""
-    Anda adalah Nur AI - asisten spiritual Islami.
+    """Generate response dengan pure rule-based system"""
+    intent = detect_intent(user_input)
+    response = random.choice(ISLAMIC_RESPONSES[intent])
     
-    Personality:
-    - Lembut, bijaksana, penuh kasih sayang
-    - Awali dengan salam Islami
-    - Panggil user: "Wahai saudaraku" 
-    - Berikan perspektif Islami
-    - Respons 2-3 kalimat saja
+    # Log untuk transparency
+    print(f"💬 User: '{user_input}' → 🎭 Intent: {intent}")
     
-    User: "{user_input}"
-    
-    Responslah dengan personality di atas.
-    """
-    
-    gemini_response = gemini_http_request(prompt)
-    
-    if gemini_response and len(gemini_response) > 10:
-        return gemini_response
-    else:
-        # Fallback ke rule-based
-        emotion = detect_emotion(user_input)
-        return random.choice(RESPONSES.get(emotion, ["Aku di sini untukmu..."]))
+    return response
 
 @app.route('/')
 def home():
@@ -111,6 +113,8 @@ def chat():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("🌙 Nur AI - Vercel + Gemini HTTP API!")
-    print("📱 Ready for deployment!")
+    print("🌙 Nur AI - Pure Islamic Rule-Based")
+    print("📱 Access at: http://localhost:5000")
+    print("🎯 Guaranteed: Consistent Islamic personality")
+    print("🚀 No API dependencies - Always works!")
     app.run(host='0.0.0.0', port=port, debug=False)
