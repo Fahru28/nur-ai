@@ -1,98 +1,42 @@
-import os
-import requests
 from flask import Flask, request, jsonify
-from bs4 import BeautifulSoup
-import json
-import re
+import random
 from datetime import datetime
 
 app = Flask(__name__)
 
-print("🚀 Starting Nur AI - Deployed Version...")
+ISLAMIC_KNOWLEDGE = {
+    "sabar": [
+        "Sabar itu cahaya - HR Muslim",
+        "Allah menyukai orang-orang yang sabar - QS Ali Imran: 146", 
+        "Sabar memiliki tiga derajat: sabar dalam ketaatan, sabar dari maksiat, dan sabar atas takdir"
+    ],
+    "syukur": [
+        "Bersyukurlah kepada Allah - QS Ibrahim: 7",
+        "Sesungguhnya jika kamu bersyukur, pasti Kami akan menambah nikmat kepadamu",
+        "Syukur adalah mengakui nikmat Allah dalam hati, mengucapkannya dengan lisan, dan mengamalkannya dengan anggota badan"
+    ],
+    "shalat": [
+        "Shalat adalah tiang agama",
+        "Shalat mencegah perbuatan keji dan mungkar", 
+        "Shalat lima waktu menghapus dosa-dosa kecil"
+    ],
+    "tasawuf": [
+        "Tasawuf adalah membersihkan hati dan mendekatkan diri kepada Allah",
+        "Ilmu tasawuf mengajarkan akhlak mulia dan penyucian jiwa"
+    ],
+    "akhlak": [
+        "Sebaik-baik manusia adalah yang paling baik akhlaknya - HR Bukhari",
+        "Akhlak mulia adalah buah dari keimanan yang benar"
+    ]
+}
 
-# ===== SIMPLE AI LEARNING =====
-class SimpleLearner:
-    def __init__(self):
-        self.knowledge_file = "islamic_knowledge.json"
-        self.setup_initial_knowledge()
-    
-    def setup_initial_knowledge(self):
-        initial_knowledge = {
-            "sabar": [
-                "Sabar itu cahaya - HR Muslim",
-                "Allah menyukai orang-orang yang sabar - QS Ali Imran: 146",
-                "Sabar memiliki tiga derajat: sabar dalam ketaatan, sabar dari maksiat, dan sabar atas takdir"
-            ],
-            "syukur": [
-                "Bersyukurlah kepada Allah - QS Ibrahim: 7",
-                "Sesungguhnya jika kamu bersyukur, pasti Kami akan menambah nikmat kepadamu",
-                "Syukur adalah mengakui nikmat Allah dalam hati, mengucapkannya dengan lisan, dan mengamalkannya dengan anggota badan"
-            ],
-            "shalat": [
-                "Shalat adalah tiang agama",
-                "Shalat mencegah perbuatan keji dan mungkar",
-                "Shalat lima waktu menghapus dosa-dosa kecil"
-            ],
-            "tasawuf": [
-                "Tasawuf adalah membersihkan hati dan mendekatkan diri kepada Allah",
-                "Ilmu tasawuf mengajarkan akhlak mulia dan penyucian jiwa"
-            ],
-            "akhlak": [
-                "Sebaik-baik manusia adalah yang paling baik akhlaknya - HR Bukhari",
-                "Akhlak mulia adalah buah dari keimanan yang benar"
-            ]
-        }
-        
-        try:
-            with open(self.knowledge_file, 'w', encoding='utf-8') as f:
-                json.dump(initial_knowledge, f, ensure_ascii=False, indent=2)
-            print("✅ Initial knowledge setup completed!")
-        except Exception as e:
-            print(f"❌ Knowledge setup error: {e}")
-
-# ===== INITIALIZE =====
-ai_learner = SimpleLearner()
-
-# ===== KNOWLEDGE BASE =====
-def load_knowledge():
-    try:
-        with open('islamic_knowledge.json', 'r', encoding='utf-8') as f:
-            knowledge = json.load(f)
-            total = sum(len(v) for v in knowledge.values())
-            print(f"📚 Knowledge base loaded: {total} wisdom")
-            return knowledge
-    except Exception as e:
-        print(f"❌ Error loading knowledge: {e}")
-        return {
-            "sabar": ["Sabar itu cahaya - HR Muslim"],
-            "syukur": ["Bersyukurlah kepada Allah - QS Ibrahim: 7"],
-            "shalat": ["Shalat adalah tiang agama"],
-            "tasawuf": ["Tasawuf adalah membersihkan hati"],
-            "akhlak": ["Sebaik-baik manusia adalah yang paling baik akhlaknya"]
-        }
-
-# ===== STATUS ENDPOINT =====
-@app.route('/api/status')
-def learning_status():
-    knowledge = load_knowledge()
-    total_wisdom = sum(len(wisdom_list) for wisdom_list in knowledge.values())
-    
-    return jsonify({
-        "status": "Nur AI Deployed on Vercel",
-        "total_knowledge": total_wisdom,
-        "categories": {cat: len(wisdom) for cat, wisdom in knowledge.items()},
-        "deployment": "Vercel + GitHub",
-        "last_update": datetime.now().strftime("%H:%M:%S")
-    })
-
-# ===== CHAT INTERFACE =====
 @app.route('/')
 def home():
     return '''
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Nur AI - Deployed Version</title>
+        <title>Nur AI - Vercel</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -120,13 +64,6 @@ def home():
                 font-size: 2em;
                 margin-bottom: 8px;
             }
-            .status-bar {
-                background: #e8f5e8;
-                padding: 12px 20px;
-                border-bottom: 1px solid #c8e6c9;
-                text-align: center;
-                font-size: 0.9em;
-            }
             .chat-container {
                 height: 450px;
                 overflow-y: auto;
@@ -139,11 +76,6 @@ def home():
                 border-radius: 20px;
                 max-width: 80%;
                 line-height: 1.4;
-                animation: fadeIn 0.3s ease-in;
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
             }
             .user-message {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -173,9 +105,6 @@ def home():
                 font-size: 16px;
                 outline: none;
             }
-            input[type="text"]:focus {
-                border-color: #667eea;
-            }
             button {
                 padding: 15px 25px;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -185,44 +114,19 @@ def home():
                 font-size: 16px;
                 cursor: pointer;
             }
-            button:hover {
-                opacity: 0.9;
-            }
-            .typing {
-                color: #666;
-                font-style: italic;
-                padding: 12px 20px;
-            }
-            .deploy-badge {
-                background: #000;
-                color: white;
-                padding: 3px 10px;
-                border-radius: 12px;
-                font-size: 0.7em;
-                margin-left: 8px;
-            }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h1>🌙 Nur AI 
-                    <span class="deploy-badge">VERCEL</span>
-                </h1>
-                <p>Deployed Version - ChatGPT-like Islami</p>
-            </div>
-            
-            <div class="status-bar">
-                <strong>🚀 Status:</strong> 
-                <span id="learningStatus">Deployed on Vercel</span>
-                • <strong>📚 Knowledge:</strong> 
-                <span id="knowledgeCount">Loading...</span>
+                <h1>🌙 Nur AI - Vercel</h1>
+                <p>ChatGPT-like Islami - Successfully Deployed! 🚀</p>
             </div>
             
             <div class="chat-container" id="chatContainer">
                 <div class="message ai-message">
                     <strong>Assalamu'alaikum! 🌟</strong><br>
-                    Saya Nur AI versi deployed! Siap membantu dengan pengetahuan Islami.
+                    Saya Nur AI versi Vercel! Berhasil di-deploy tanpa error!
                 </div>
             </div>
             
@@ -251,12 +155,6 @@ def home():
                 addMessage(message, true);
                 messageInput.value = '';
 
-                const typingDiv = document.createElement('div');
-                typingDiv.className = 'typing';
-                typingDiv.textContent = 'Nur AI sedang mengetik...';
-                chatContainer.appendChild(typingDiv);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-
                 try {
                     const response = await fetch('/api/chat', {
                         method: 'POST',
@@ -265,22 +163,9 @@ def home():
                     });
 
                     const data = await response.json();
-                    chatContainer.removeChild(typingDiv);
                     addMessage(data.response);
                 } catch (error) {
-                    chatContainer.removeChild(typingDiv);
                     addMessage('❌ Maaf, terjadi kesalahan. Silakan coba lagi.');
-                }
-            }
-
-            // Update status
-            async function updateLearningStatus() {
-                try {
-                    const response = await fetch('/api/status');
-                    const data = await response.json();
-                    document.getElementById('knowledgeCount').textContent = data.total_knowledge;
-                } catch (error) {
-                    console.log('Gagal update status');
                 }
             }
 
@@ -290,7 +175,6 @@ def home():
                 }
             });
 
-            updateLearningStatus();
             messageInput.focus();
         </script>
     </body>
@@ -300,52 +184,37 @@ def home():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
-        user_message = request.json.get('message', '').strip()
+        user_message = request.json.get('message', '').strip().lower()
         
         if not user_message:
             return jsonify({"response": "Assalamu'alaikum! Silakan ketik pesan."})
 
-        knowledge = load_knowledge()
-        user_lower = user_message.lower()
-        
-        if any(greet in user_lower for greet in ['halo', 'hai', 'assalamu', 'hello']):
+        if any(greet in user_message for greet in ['halo', 'hai', 'assalamu', 'hello']):
             response = "Wa'alaikumussalam! Ada yang bisa saya bantu? 🌙"
         
-        elif 'sabar' in user_lower and knowledge['sabar']:
-            import random
-            response = random.choice(knowledge['sabar'])
+        elif 'sabar' in user_message:
+            response = random.choice(ISLAMIC_KNOWLEDGE['sabar'])
             
-        elif 'syukur' in user_lower and knowledge['syukur']:
-            import random
-            response = random.choice(knowledge['syukur'])
+        elif 'syukur' in user_message:
+            response = random.choice(ISLAMIC_KNOWLEDGE['syukur'])
             
-        elif 'shalat' in user_lower and knowledge['shalat']:
-            import random
-            response = random.choice(knowledge['shalat'])
+        elif 'shalat' in user_message:
+            response = random.choice(ISLAMIC_KNOWLEDGE['shalat'])
             
-        elif any(word in user_lower for word in ['tasawuf', 'sufi', 'zikir']) and knowledge['tasawuf']:
-            import random
-            response = random.choice(knowledge['tasawuf'])
+        elif any(word in user_message for word in ['tasawuf', 'sufi', 'zikir']):
+            response = random.choice(ISLAMIC_KNOWLEDGE['tasawuf'])
             
-        elif any(word in user_lower for word in ['akhlak', 'moral', 'etika']) and knowledge['akhlak']:
-            import random
-            response = random.choice(knowledge['akhlak'])
+        elif any(word in user_message for word in ['akhlak', 'moral', 'etika']):
+            response = random.choice(ISLAMIC_KNOWLEDGE['akhlak'])
             
-        elif any(word in user_lower for word in ['makasih', 'terima kasih']):
+        elif any(word in user_message for word in ['makasih', 'terima kasih']):
             response = "Sama-sama! Semoga bermanfaat. 😊"
             
-        elif 'nama' in user_lower:
-            response = "Saya Nur AI - Deployed on Vercel! 🚀"
-            
-        elif 'deploy' in user_lower or 'vercel' in user_lower:
-            response = "Ya! Saya sudah di-deploy di Vercel dan GitHub. Bisa diakses dari mana saja! 🌍"
+        elif 'nama' in user_message:
+            response = "Saya Nur AI - Berhasil di Vercel! 🚀"
             
         else:
-            if knowledge['sabar']:  # Fallback to sabar knowledge
-                import random
-                response = random.choice(knowledge['sabar'])
-            else:
-                response = "Pertanyaan bagus! Saya sedang terus dikembangkan. 😊"
+            response = random.choice(ISLAMIC_KNOWLEDGE['sabar'] + ISLAMIC_KNOWLEDGE['syukur'])
 
         return jsonify({
             "response": response,
@@ -353,12 +222,7 @@ def chat():
         })
         
     except Exception as e:
-        return jsonify({"response": f"Maaf terjadi error: {str(e)}"})
+        return jsonify({"response": "Maaf, terjadi kesalahan sistem."})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Server running on: http://localhost:{port}")
-    print("📚 Knowledge base: Ready")
-    print("🌍 Deployment: Vercel Ready")
-    print("⏹️  Press Ctrl+C to stop")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=False)
